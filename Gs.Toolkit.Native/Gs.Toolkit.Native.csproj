@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{CA1CD91C-6731-4BED-A4BD-365391F2FE3C}</ProjectGuid>
+    <ProjectGuid>{1B13C90B-7D58-4A71-A989-05C46AB72C54}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Gs.Toolkit</RootNamespace>
-    <AssemblyName>Gs.Toolkit</AssemblyName>
+    <RootNamespace>Gs.Toolkit.Native</RootNamespace>
+    <AssemblyName>Gs.Toolkit.Native</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
@@ -41,17 +41,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Emit\DelegateBuilder.cs" />
-    <Compile Include="Encrypt\Md5.cs" />
-    <Compile Include="Extension\DateTimeEx.cs" />
-    <Compile Include="Extension\IntPtrExtension.cs" />
-    <Compile Include="Extension\ObjectExtension.cs" />
-    <Compile Include="Extension\PathEx.cs" />
-    <Compile Include="Extension\PingEx.cs" />
-    <Compile Include="Extension\StreamEx.cs" />
-    <Compile Include="Extension\TaskExtension.cs" />
-    <Compile Include="Extension\TypeExtension.cs" />
+    <Compile Include="INative.cs" />
+    <Compile Include="Native.cs" />
+    <Compile Include="NativeFactory.cs" />
+    <Compile Include="NativeFunctonAttribute.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Gs.Toolkit\Gs.Toolkit.csproj">
+      <Project>{ca1cd91c-6731-4bed-a4bd-365391f2fe3c}</Project>
+      <Name>Gs.Toolkit</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
