@@ -54,5 +54,24 @@ namespace Gs.Toolkit.Native.Test
             Assert.AreEqual(input, result);
 
         }
+
+        [TestMethod]
+        public void CreateTest()
+        {
+            string input = "F:\\Work\\Koolearn.Media\\Koolearn.Media.Sample\\bin\\x86\\Debug\\media\\lib_ss_player.dll";
+
+            try
+            {
+                using (dynamic native = NativeFactory.Create(input))
+                {
+                    //result = native.test<int>(input);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+          
+        }
     }
 }

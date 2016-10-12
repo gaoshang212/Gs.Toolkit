@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
@@ -52,10 +53,10 @@ namespace Gs.Toolkit.Native
 
             Console.WriteLine("the process is {0}bit", Environment.Is64BitProcess ? 64 : 32);
 
-            _handle = NativeMethods.LoadLibrary(FileName);
+            _handle = NativeMethods.LoadLibraryEx(FileName, IntPtr.Zero, LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH);
             if (_handle == IntPtr.Zero)
             {
-                throw new Exception("LoadLibray is faild, the handle is zero.");
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
 
