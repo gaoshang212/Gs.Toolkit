@@ -50,7 +50,6 @@
     <Compile Include="INative.cs" />
     <Compile Include="LoadLibraryFlags.cs" />
     <Compile Include="Native.cs" />
-    <Compile Include="NativeBase.cs" />
     <Compile Include="NativeFactory.cs" />
     <Compile Include="NativeFunctonAttribute.cs" />
     <Compile Include="NativeMethods.cs" />

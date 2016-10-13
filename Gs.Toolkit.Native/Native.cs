@@ -27,6 +27,7 @@ namespace Gs.Toolkit.Native
         };
 
         private DelegateBuilder _delegateBuilder;
+        private IDisposable _disposable;
 
         public string FileName { get; private set; }
 
@@ -35,6 +36,13 @@ namespace Gs.Toolkit.Native
         internal Native(string p_filename) : base(IntPtr.Zero, true)
         {
             FileName = p_filename;
+            LoadLibrary();
+        }
+
+        internal Native(string p_filename, IDisposable p_disposable) : base(IntPtr.Zero, true)
+        {
+            FileName = p_filename;
+            _disposable = p_disposable;
             LoadLibrary();
         }
 
@@ -244,8 +252,12 @@ namespace Gs.Toolkit.Native
 
         protected override bool ReleaseHandle()
         {
-            var tHandle = handle;
-            return NativeMethods.FreeLibrary(tHandle);
+            if (_disposable != null)
+            {
+                _disposable.Dispose();
+            }
+
+            return NativeMethods.FreeLibrary(handle);
         }
 
         public override bool IsInvalid => this.handle == IntPtr.Zero;
