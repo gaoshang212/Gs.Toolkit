@@ -9,5 +9,15 @@ namespace Gs.Toolkit.Extension
         {
             return p_objects?.Select(i => i.GetType()).ToArray();
         }
+
+        public static object GetDefault(this Type type)
+        {
+            if (type.IsValueType)
+            {
+                return Activator.CreateInstance(type);
+            }
+
+            return null;
+        }
     }
 }

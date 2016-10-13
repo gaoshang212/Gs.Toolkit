@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 using Gs.Toolkit.Encrypt;
 
 namespace Gs.Toolkit.Emit
@@ -39,30 +40,30 @@ namespace Gs.Toolkit.Emit
             return _moduleBuilder;
         }
 
-        public Type CreateDelegate(string p_name, Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
+        public Type CreateDelegate(Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
         {
             var paramTypes = p_paramTypes;
             var retrunType = p_retrunType;
 
             var md5 = CreateSign(paramTypes, retrunType);
 
-            return InternalCreateDelegate(md5, p_name, paramTypes, retrunType, p_func);
+            return InternalCreateDelegate(md5, paramTypes, retrunType, p_func);
         }
 
-        public Type InternalCreateDelegate(string p_sign, string p_name, Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
+        public Type InternalCreateDelegate(string p_sign, Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
         {
             var paramTypes = p_paramTypes;
             var retrunType = p_retrunType;
 
-            if (CheckSignAndName(p_name, p_sign))
+            if (CheckSign(p_sign))
             {
                 throw new ArgumentException("The delegate is exsit. the same name and same paramters.");
             }
 
-            return InternalCreateDelegate(p_name, paramTypes, retrunType, p_func);
+            return InternalCreateDelegate(paramTypes, retrunType, p_func);
         }
 
-        protected Type InternalCreateDelegate(string p_name, Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
+        protected Type InternalCreateDelegate(Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
         {
             var mbuilder = _moduleBuilder;
             if (mbuilder == null)
@@ -70,7 +71,9 @@ namespace Gs.Toolkit.Emit
                 throw new ArgumentException("ModuleBuilder is null");
             }
 
-            var delegateBuilder = mbuilder.DefineType(p_name, TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed, typeof(MulticastDelegate));
+            var typeName = CreateClassName();
+
+            var delegateBuilder = mbuilder.DefineType(typeName, TypeAttributes.Public | TypeAttributes.AutoLayout | TypeAttributes.AnsiClass | TypeAttributes.Sealed, typeof(MulticastDelegate));
 
             foreach (var cbuilder in p_func())
             {
@@ -88,7 +91,7 @@ namespace Gs.Toolkit.Emit
             return delegateType;
         }
 
-        public Type CreateDelegateBySingle(string p_name, Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
+        public Type CreateDelegateBySingle(Type[] p_paramTypes, Type p_retrunType, Func<CustomAttributeBuilder[]> p_func)
         {
             var paramTypes = p_paramTypes;
             var retrunType = p_retrunType;
@@ -100,23 +103,16 @@ namespace Gs.Toolkit.Emit
                 return _dic[md5];
             }
 
-            var type = InternalCreateDelegate(md5, p_name, paramTypes, retrunType, p_func);
+            var type = InternalCreateDelegate(md5, paramTypes, retrunType, p_func);
             _dic.Add(md5, type);
 
             return type;
         }
 
-        private bool CheckSignAndName(string p_name, string p_sign)
+        private bool CheckSign(string p_sign)
         {
             Type type;
-            _dic.TryGetValue(p_sign, out type);
-
-            if (type == null)
-            {
-                return false;
-            }
-
-            return string.Equals(type.Name, p_name);
+            return _dic.TryGetValue(p_sign, out type);
         }
 
         private string CreateSign(Type[] p_paramTypes, Type p_retrunType)
@@ -137,6 +133,14 @@ namespace Gs.Toolkit.Emit
             var md5 = Md5.Create(prstring);
 
             return md5;
+        }
+
+        private int _index = 0;
+
+        [MethodImpl(MethodImplOptions.Synchronized)]
+        private string CreateClassName()
+        {
+            return $"T_Delegate_{_index++}";
         }
     }
 }

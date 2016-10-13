@@ -1,17 +1,18 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Runtime.InteropServices;
+using Gs.Toolkit.Dynamic;
 using Gs.Toolkit.Emit;
 using Gs.Toolkit.Extension;
 
 namespace Gs.Toolkit.Native
 {
-    public class Native : DynamicObject, INative
+    public class Native : SafeHandle, IDynamicMetaObjectProvider, INative
     {
         private Func<CustomAttributeBuilder[]> _cabfunc = () =>
         {
@@ -25,39 +26,16 @@ namespace Gs.Toolkit.Native
             return new[] { new CustomAttributeBuilder(cinfo, new object[] { CallingConvention.Cdecl }) };
         };
 
-        private IntPtr _handle;
-
         private DelegateBuilder _delegateBuilder;
 
         public string FileName { get; private set; }
 
-        public bool IsDisposed { get; protected set; }
+        public bool HasDisposed { get; protected set; }
 
-        internal Native(string p_filename)
+        internal Native(string p_filename) : base(IntPtr.Zero, true)
         {
             FileName = p_filename;
             LoadLibrary();
-        }
-
-        private void LoadLibrary()
-        {
-            if (string.IsNullOrEmpty(FileName))
-            {
-                throw new ArgumentNullException();
-            }
-
-            if (!File.Exists(FileName))
-            {
-                throw new FileNotFoundException("dll is not found.");
-            }
-
-            Console.WriteLine("the process is {0}bit", Environment.Is64BitProcess ? 64 : 32);
-
-            _handle = NativeMethods.LoadLibraryEx(FileName, IntPtr.Zero, LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH);
-            if (_handle == IntPtr.Zero)
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
         }
 
         public T GetFunction<T>()
@@ -73,42 +51,48 @@ namespace Gs.Toolkit.Native
             return t;
         }
 
-        public TResult Call<TResult, T>(params object[] p_params)
+        public TResult Invoke<TResult, T>(params object[] p_params)
         {
-            if (_handle == IntPtr.Zero)
+            if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
 
             var attribute = GetNativeFunctonAttribute(typeof(T));
 
-            return Call<TResult, T>(attribute.FunctionName, p_params);
+            return Invoke<TResult>(attribute.FunctionName, p_params);
         }
 
-        public TResult Call<TResult>(string p_funName, params object[] p_params)
+        public TResult Invoke<TResult>(string p_funName, params object[] p_params)
         {
-            if (_handle == IntPtr.Zero)
+            return (TResult)Invoke(p_funName, typeof(TResult), p_params);
+        }
+
+        public object Invoke(string p_funName, Type p_returnType, params object[] p_params)
+        {
+            if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
 
-            var type = CreateDelegateType<TResult>(p_funName, p_params);
+            var type = CreateDelegateType(p_params, p_returnType);
 
             var dg = GetFunctionDelegate(type, p_funName);
             if (dg == null)
             {
-                return default(TResult);
+                return p_returnType == null ? null : p_returnType.GetDefault();
             }
-            return (TResult)dg.DynamicInvoke(p_params);
+
+            return dg.DynamicInvoke(p_params);
         }
 
-        public void Run(string p_funName, params object[] p_params)
+        public void Call(string p_funName, params object[] p_params)
         {
-            if (_handle == IntPtr.Zero)
+            if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
-            var type = CreateDelegateType(p_funName, p_params, null);
+            var type = CreateDelegateType(p_params, null);
             var dg = GetFunctionDelegate(type, p_funName);
             if (dg != null)
             {
@@ -116,9 +100,9 @@ namespace Gs.Toolkit.Native
             }
         }
 
-        public void Run<T>(params object[] p_params)
+        public void Call<T>(params object[] p_params)
         {
-            if (_handle == IntPtr.Zero)
+            if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
@@ -139,6 +123,29 @@ namespace Gs.Toolkit.Native
 
         #region Private Methods
 
+        private void LoadLibrary()
+        {
+            if (string.IsNullOrEmpty(FileName))
+            {
+                throw new ArgumentNullException();
+            }
+
+            if (!File.Exists(FileName))
+            {
+                throw new FileNotFoundException("dll is not found.");
+            }
+
+            Console.WriteLine("the process is {0}bit", Environment.Is64BitProcess ? 64 : 32);
+
+            var tmpHandle = NativeMethods.LoadLibraryEx(FileName, IntPtr.Zero, LoadLibraryFlags.LOAD_WITH_ALTERED_SEARCH_PATH);
+            if (tmpHandle == IntPtr.Zero)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+
+            SetHandle(tmpHandle);
+        }
+
         private Delegate GetFunctionDelegate<T>(string p_funName)
         {
             return GetFunctionDelegate(typeof(T), p_funName);
@@ -146,7 +153,7 @@ namespace Gs.Toolkit.Native
 
         private Delegate GetFunctionDelegate(Type p_type, string p_funName)
         {
-            if (_handle == IntPtr.Zero)
+            if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
@@ -162,7 +169,12 @@ namespace Gs.Toolkit.Native
                 throw new ArgumentException("The T is not a Delegate");
             }
 
-            var address = NativeMethods.GetProcAddress(_handle, p_funName);
+            var address = NativeMethods.GetProcAddress(this.handle, p_funName);
+
+            if (address == IntPtr.Zero)
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
 
             var dg = Marshal.GetDelegateForFunctionPointer(address, type);
 
@@ -192,15 +204,15 @@ namespace Gs.Toolkit.Native
             return _delegateBuilder;
         }
 
-        private Type CreateDelegateType<T>(string p_funName, object[] p_params)
+        private Type CreateDelegateType<T>(object[] p_params)
         {
-            return CreateDelegateType(p_funName, p_params, typeof(T));
+            return CreateDelegateType(p_params, typeof(T));
         }
 
-        private Type CreateDelegateType(string p_funName, object[] p_params, Type p_retrunType)
+        private Type CreateDelegateType(object[] p_params, Type p_retrunType)
         {
             var builder = GetDelegateBuilder();
-            var type = builder.CreateDelegateBySingle(p_funName, p_params.GetTypes(), p_retrunType, _cabfunc);
+            var type = builder.CreateDelegateBySingle(p_params.GetTypes(), p_retrunType, _cabfunc);
             return type;
         }
 
@@ -208,49 +220,38 @@ namespace Gs.Toolkit.Native
 
         #region Dynamic
 
-        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] p_args, out object p_result)
+        private DynamicNative _dynamicNative;
+
+        public DynamicMetaObject GetMetaObject(Expression parameter)
         {
-            var csharpBinder = binder.GetType().GetInterface("Microsoft.CSharp.RuntimeBinder.ICSharpInvokeOrInvokeMemberBinder");
-            var typeArgs = csharpBinder.GetProperty("TypeArguments").GetValue(binder, null) as IList<Type>;
-
-            Type retrunType = null;
-            if (typeArgs != null && typeArgs.Count > 0)
+            if (_dynamicNative == null)
             {
-                retrunType = typeArgs.First();
+                _dynamicNative = new DynamicNative(this);
             }
 
-            var funcName = binder.Name;
-
-            var type = CreateDelegateType(funcName, p_args, retrunType);
-
-            var dg = GetFunctionDelegate(type, funcName);
-            if (dg == null)
-            {
-                p_result = null;
-                return false;
-            }
-
-            p_result = dg.DynamicInvoke(p_args);
-
-            return true;
+            return new DelegatingMetaObject(_dynamicNative, parameter, BindingRestrictions.GetTypeRestriction(parameter, this.GetType()), this);
         }
-
 
         #endregion
 
-        public void Dispose()
+        #region SafeHandle
+
+        protected override void Dispose(bool disposing)
         {
-            var handle = _handle;
-            _handle = IntPtr.Zero;
-
-            if (handle == IntPtr.Zero)
-            {
-                return;
-            }
-
-            NativeMethods.FreeLibrary(handle);
-
-            IsDisposed = true;
+            base.Dispose(disposing);
+            HasDisposed = true;
         }
+
+        protected override bool ReleaseHandle()
+        {
+            var tHandle = handle;
+            return NativeMethods.FreeLibrary(tHandle);
+        }
+
+        public override bool IsInvalid => this.handle == IntPtr.Zero;
+
+        #endregion
+
+
     }
 }

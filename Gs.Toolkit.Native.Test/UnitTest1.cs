@@ -19,8 +19,11 @@ namespace Gs.Toolkit.Native.Test
             int result = -1;
             using (var native = NativeFactory.Create(@"../../libtest.dll"))
             {
-                var test = native.GetFunction<UnitTest1.Test>();
-                result = test(input);
+                using (var native1 = NativeFactory.Create(@"../../libtest.dll"))
+                {
+                    var test = native1.GetFunction<UnitTest1.Test>();
+                    result = test(input);
+                }
             }
 
             Assert.AreEqual(input, result);
@@ -34,7 +37,7 @@ namespace Gs.Toolkit.Native.Test
             int result = -1;
             using (var native = NativeFactory.Create(@"../../libtest.dll"))
             {
-                result = native.Call<int>("test", input);
+                result = native.Invoke<int>("test", input);
             }
 
             Assert.AreEqual(input, result);
@@ -71,7 +74,7 @@ namespace Gs.Toolkit.Native.Test
             {
                 throw;
             }
-          
+
         }
     }
 }

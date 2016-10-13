@@ -4,16 +4,23 @@ namespace Gs.Toolkit.Native
 {
     public interface INative : IDisposable
     {
-        bool IsDisposed { get; }
+        bool HasDisposed { get; }
 
-        T GetFunction<T>();
+        /// <summary>
+        /// 获取函数委托
+        /// </summary>
+        /// <typeparam name="TDelegate"></typeparam>
+        /// <returns></returns>
+        TDelegate GetFunction<TDelegate>();
 
-        TResult Call<TResult, T>(params object[] p_params);
+        TResult Invoke<TResult, TDelegate>(params object[] p_params);
 
-        void Run<T>(params object[] p_params);
+        TResult Invoke<TResult>(string p_funName, params object[] p_params);
 
-        TResult Call<TResult>(string p_funName, params object[] p_params);
+        object Invoke(string p_funName, Type p_retrunType, params object[] p_params);
 
-        void Run(string p_funName, params object[] p_params);
+        void Call<TDelegate>(params object[] p_params);
+
+        void Call(string p_funName, params object[] p_params);
     }
 }

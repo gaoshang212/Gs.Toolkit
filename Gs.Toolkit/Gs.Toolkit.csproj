@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Dynamic\DelegatingMetaObject.cs" />
     <Compile Include="Emit\DelegateBuilder.cs" />
     <Compile Include="Encrypt\Md5.cs" />
     <Compile Include="Extension\DateTimeEx.cs" />
@@ -62,6 +63,7 @@
   <ItemGroup>
     <None Include="Gs.Toolkit.pfx" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -12,7 +12,8 @@ namespace Gs.Toolkit.Native
         public static extern IntPtr LoadLibrary(string funcname);
 
         [DllImport("Kernel32", SetLastError = true)]
-        public static extern int FreeLibrary(IntPtr handle);
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool FreeLibrary(IntPtr handle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr LoadLibraryEx(string lpFileName, IntPtr hReservedNull, LoadLibraryFlags dwFlags);
