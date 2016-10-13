@@ -58,7 +58,7 @@ namespace Gs.Toolkit.Native.Test
         [TestMethod]
         public void CreateTest()
         {
-            string input = "F:\\Work\\Koolearn.Media\\Koolearn.Media.Sample\\bin\\x86\\Debug\\media\\lib_ss_player.dll";
+            string input = "";
 
             try
             {
