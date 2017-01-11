@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Gs.Toolkit.Native
 {
@@ -17,10 +18,14 @@ namespace Gs.Toolkit.Native
 
         TResult Invoke<TResult>(string p_funName, params object[] p_params);
 
+        TResult Invoke<TResult>(string p_funName, CallingConvention p_calling, params object[] p_params);
+
         object Invoke(string p_funName, Type p_retrunType, params object[] p_params);
 
         void Call<TDelegate>(params object[] p_params);
 
         void Call(string p_funName, params object[] p_params);
+
+        void Call(string p_funName, CallingConvention p_calling, params object[] p_params);
     }
 }

@@ -21,7 +21,7 @@ namespace Gs.Toolkit.Native.Test
             {
                 using (var native1 = NativeFactory.Create(@"../../libtest.dll"))
                 {
-                    var test = native1.GetFunction<UnitTest1.Test>();
+                    var test = native1.GetFunction<Test>();
                     result = test(input);
                 }
             }
@@ -61,20 +61,37 @@ namespace Gs.Toolkit.Native.Test
         [TestMethod]
         public void CreateTest()
         {
-            string input = "";
+            string input = @"";
 
             try
             {
-                using (dynamic native = NativeFactory.Create(input))
+                using (dynamic native = NativeFactory.Create(input, CallingConvention.ThisCall))
                 {
-                    //result = native.test<int>(input);
+
                 }
             }
             catch (Exception ex)
             {
                 throw;
             }
+        }
 
+        [TestMethod]
+        public void CallingConventionFunction()
+        {
+            string input = @"../../libtest.dll";
+
+            try
+            {
+                using (var native = NativeFactory.Create(input))
+                {
+                    var result = native.Invoke<int>("test", CallingConvention.StdCall, input);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
     }
 }

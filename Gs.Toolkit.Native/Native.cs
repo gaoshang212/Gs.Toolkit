@@ -14,20 +14,9 @@ namespace Gs.Toolkit.Native
 {
     public class Native : SafeHandle, IDynamicMetaObjectProvider, INative
     {
-        private Func<CustomAttributeBuilder[]> _cabfunc = () =>
-        {
-            var cinfo = typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) });
-
-            if (cinfo == null)
-            {
-                return new CustomAttributeBuilder[0];
-            }
-
-            return new[] { new CustomAttributeBuilder(cinfo, new object[] { CallingConvention.Cdecl }) };
-        };
-
         private DelegateBuilder _delegateBuilder;
         private IDisposable _disposable;
+        private CallingConvention _calling = CallingConvention.Cdecl;
 
         public string FileName { get; private set; }
 
@@ -44,6 +33,11 @@ namespace Gs.Toolkit.Native
             FileName = p_filename;
             _disposable = p_disposable;
             LoadLibrary();
+        }
+
+        internal Native(string p_filename, CallingConvention p_calling) : this(p_filename)
+        {
+            _calling = p_calling;
         }
 
         public T GetFunction<T>()
@@ -73,17 +67,27 @@ namespace Gs.Toolkit.Native
 
         public TResult Invoke<TResult>(string p_funName, params object[] p_params)
         {
-            return (TResult)Invoke(p_funName, typeof(TResult), p_params);
+            return Invoke<TResult>(p_funName, _calling, typeof(TResult), p_params);
+        }
+
+        public TResult Invoke<TResult>(string p_funName, CallingConvention p_calling, params object[] p_params)
+        {
+            return (TResult)Invoke(p_funName, p_calling, typeof(TResult), p_params);
         }
 
         public object Invoke(string p_funName, Type p_returnType, params object[] p_params)
+        {
+            return Invoke(p_funName, _calling, p_returnType, p_params);
+        }
+
+        public object Invoke(string p_funName, CallingConvention p_calling, Type p_returnType, params object[] p_params)
         {
             if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
 
-            var type = CreateDelegateType(p_params, p_returnType);
+            var type = CreateDelegateType(p_params, p_returnType, p_calling);
 
             var dg = GetFunctionDelegate(type, p_funName);
             if (dg == null)
@@ -96,11 +100,17 @@ namespace Gs.Toolkit.Native
 
         public void Call(string p_funName, params object[] p_params)
         {
+            Call(p_funName, _calling, p_params);
+        }
+
+        public void Call(string p_funName, CallingConvention p_calling, params object[] p_params)
+        {
             if (IsInvalid)
             {
                 throw new Exception("The library can not be loaded.");
             }
-            var type = CreateDelegateType(p_params, null);
+
+            var type = CreateDelegateType(p_params, null, p_calling);
             var dg = GetFunctionDelegate(type, p_funName);
             if (dg != null)
             {
@@ -127,7 +137,6 @@ namespace Gs.Toolkit.Native
 
             dg.DynamicInvoke(p_params);
         }
-
 
         #region Private Methods
 
@@ -214,14 +223,31 @@ namespace Gs.Toolkit.Native
 
         private Type CreateDelegateType<T>(object[] p_params)
         {
-            return CreateDelegateType(p_params, typeof(T));
+            return CreateDelegateType(p_params, typeof(T), _calling);
         }
 
-        private Type CreateDelegateType(object[] p_params, Type p_retrunType)
+        private Type CreateDelegateType(object[] p_params, Type p_retrunType, CallingConvention p_calling)
         {
             var builder = GetDelegateBuilder();
-            var type = builder.CreateDelegateBySingle(p_params.GetTypes(), p_retrunType, _cabfunc);
+            var type = builder.CreateDelegateBySingle(p_params.GetTypes(), p_retrunType, CreateCustomAttributeBuilderFunc(p_calling));
             return type;
+        }
+
+        private Func<CustomAttributeBuilder[]> CreateCustomAttributeBuilderFunc(CallingConvention p_calling)
+        {
+            CustomAttributeBuilder[] result;
+            var cinfo = typeof(UnmanagedFunctionPointerAttribute).GetConstructor(new[] { typeof(CallingConvention) });
+
+            if (cinfo == null)
+            {
+                result = new CustomAttributeBuilder[0];
+            }
+            else
+            {
+                result = new[] { new CustomAttributeBuilder(cinfo, new object[] { CallingConvention.Cdecl }) };
+            }
+
+            return () => result;
         }
 
         #endregion
@@ -263,6 +289,7 @@ namespace Gs.Toolkit.Native
         public override bool IsInvalid => this.handle == IntPtr.Zero;
 
         #endregion
+
 
 
     }

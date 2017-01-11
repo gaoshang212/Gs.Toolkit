@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Gs.Toolkit.Native
 {
@@ -20,6 +21,15 @@ namespace Gs.Toolkit.Native
             {
                 var native = new Native(p_fileName, p_disposable);
 
+                return native;
+            }
+        }
+
+        public static INative Create(string p_fileName, CallingConvention p_calling)
+        {
+            lock (typeof(NativeFactory))
+            {
+                var native = new Native(p_fileName, p_calling);
                 return native;
             }
         }
